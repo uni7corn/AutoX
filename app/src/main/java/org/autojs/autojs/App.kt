@@ -10,8 +10,9 @@ import android.widget.ImageView
 import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.multidex.MultiDexApplication
+import androidx.work.Configuration
 import com.bumptech.glide.Glide
-import com.bumptech.glide.request.target.SimpleTarget
+import com.bumptech.glide.request.target.CustomViewTarget
 import com.bumptech.glide.request.transition.Transition
 import com.flurry.android.FlurryAgent
 import com.stardust.app.GlobalAppContext
@@ -36,7 +37,7 @@ import java.lang.ref.WeakReference
  * Created by Stardust on 2017/1/27.
  */
 
-class App : MultiDexApplication() {
+class App : MultiDexApplication(), Configuration.Provider {
     lateinit var dynamicBroadcastReceivers: DynamicBroadcastReceivers
         private set
 
@@ -134,13 +135,16 @@ class App : MultiDexApplication() {
             override fun loadIntoBackground(view: View, uri: Uri) {
                 Glide.with(view)
                     .load(uri)
-                    .into(object : SimpleTarget<Drawable>() {
+                    .into(object : CustomViewTarget<View, Drawable>(view) {
                         override fun onResourceReady(
                             resource: Drawable,
                             transition: Transition<in Drawable>?
                         ) {
                             view.background = resource
                         }
+
+                        override fun onLoadFailed(errorDrawable: Drawable?) =Unit
+                        override fun onResourceCleared(placeholder: Drawable?)=Unit
                     })
             }
 
@@ -155,13 +159,15 @@ class App : MultiDexApplication() {
             ) {
                 Glide.with(view)
                     .load(uri)
-                    .into(object : SimpleTarget<Drawable>() {
+                    .into(object : CustomViewTarget<View, Drawable>(view){
                         override fun onResourceReady(
                             resource: Drawable,
                             transition: Transition<in Drawable>?
                         ) {
                             drawableCallback.onLoaded(resource)
                         }
+                        override fun onLoadFailed(errorDrawable: Drawable?) =Unit
+                        override fun onResourceCleared(placeholder: Drawable?)=Unit
                     })
             }
 
@@ -169,17 +175,23 @@ class App : MultiDexApplication() {
                 Glide.with(view)
                     .asBitmap()
                     .load(uri)
-                    .into(object : SimpleTarget<Bitmap>() {
+                    .into(object : CustomViewTarget<View, Bitmap>(view) {
                         override fun onResourceReady(
                             resource: Bitmap,
                             transition: Transition<in Bitmap>?
                         ) {
                             bitmapCallback.onLoaded(resource)
                         }
+                        override fun onLoadFailed(errorDrawable: Drawable?) =Unit
+                        override fun onResourceCleared(placeholder: Drawable?)=Unit
                     })
             }
         })
     }
+
+    override val workManagerConfiguration = Configuration.Builder()
+        .setMinimumLoggingLevel(android.util.Log.INFO)
+        .build()
 
     companion object {
 
@@ -191,6 +203,4 @@ class App : MultiDexApplication() {
         val app: App
             get() = instance.get()!!
     }
-
-
 }

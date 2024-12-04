@@ -13,6 +13,7 @@ import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.Nullable
 import androidx.core.view.ViewCompat
@@ -113,9 +114,11 @@ class SplashActivity : ComponentActivity() {
                         Permissions.ACCESSIBILITY_SERVICES -> {
                             requestAccessibilityService()
                         }
+
                         Permissions.BACKGROUND_START -> {
                             requestBackgroundStart()
                         }
+
                         Permissions.DRAW_OVERLAY -> {
                             requestDrawOverlays()
                         }
@@ -131,11 +134,12 @@ class SplashActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_splash)
         lifecycleScope.launch {
-            projectConfig =
-                ProjectConfig.fromAssetsAsync(
-                    this@SplashActivity,
-                    ProjectConfig.configFileOfDir("project")
-                )!!
+            projectConfig = withContext(Dispatchers.IO) {
+                    ProjectConfig.fromAssets(
+                        this@SplashActivity,
+                        ProjectConfig.configFileOfDir("project")
+                    )!!
+                }
             if (projectConfig.launchConfig.displaySplash) {
                 val frame = findViewById<FrameLayout>(R.id.frame)
                 frame.visibility = View.VISIBLE
@@ -188,10 +192,12 @@ class SplashActivity : ComponentActivity() {
                     permissionsResult[permission] =
                         AccessibilityServiceTool.isAccessibilityServiceEnabled(this)
                 }
+
                 Permissions.BACKGROUND_START -> {
                     permissionsResult[permission] =
                         BackgroundStartPermission.isBackgroundStartAllowed(this)
                 }
+
                 Permissions.DRAW_OVERLAY -> {
                     permissionsResult[permission] = DrawOverlaysPermission.isCanDrawOverlays(this)
                 }

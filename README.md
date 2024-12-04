@@ -23,7 +23,7 @@
 
 关于两种协议：
 
-* GPL-V2（https://opensource.org/licenses/GPL-2.0）
+* GPL-V2[https://opensource.org/licenses/GPL-2.0](https://opensource.org/license/gpl-2-0/)
 * MPL-2 (https://www.mozilla.org/MPL/2.0)
 
 ### 现在的Autox.js：
@@ -33,6 +33,10 @@
 * pc端开发[VS Code 插件](https://marketplace.visualstudio.com/items?itemName=aaroncheng.auto-js-vsce-fixed)
 * 官方论坛： [www.autoxjs.com](http://www.autoxjs.com)
 * autoxjs[更新日志](CHANGELOG.md)
+
+### 欢迎点赞
+
+[![Star History Chart](https://api.star-history.com/svg?repos=kkevsekk1/AutoX&type=Date)](https://star-history.com/#kkevsekk1/AutoX&Date)
 
 ### Autox.js下载地址：
 [https://github.com/kkevsekk1/AutoX/releases](https://github.com/kkevsekk1/AutoX/releases)  
@@ -72,7 +76,7 @@
 
 ### 架构图
 
-待补充，不过是否有人真对此干兴趣？欢迎联系我交流
+待补充，不过是否有人真对此感兴趣？欢迎联系我交流
 
 ## 关于License
 
@@ -121,22 +125,24 @@
 * autojs 能不能商用,取决于你对于附带的 “ **非商业性使用** ” 的理解和其法律效益。
 * 反正本产品不会拿autojs 进行商用。
 
-#### 编译相关：
+### 编译相关：
+环境要求:`jdk`版本17以上
+
 命令说明：在项目根目录下运行命令，如果使用 Windows powerShell < 7.0，请使用包含 ";" 的命令
 
 ##### 本地安装调试版本到设备：
 ```shell
-./gradlew inrt:assembleTemplateDebug && ./gradlew inrt:cp2APPDebug && ./gradlew app:assembleV6Debug && ./gradlew app:installV6Debug
+./gradlew app:buildDebugTemplateApp && ./gradlew app:assembleV6Debug && ./gradlew app:installV6Debug
 #或
-./gradlew inrt:assembleTemplateDebug ; ./gradlew inrt:cp2APPDebug ; ./gradlew app:assembleV6Debug ; ./gradlew app:installV6Debug
+./gradlew app:buildDebugTemplateApp ; ./gradlew app:assembleV6Debug ; ./gradlew app:installV6Debug
 ```
 生成的调试版本APK文件在 app/build/outputs/apk/v6/debug 下，使用默认签名
 
 ##### 本地编译发布版本：
 ```shell
-./gradlew inrt:assembleTemplate && ./gradlew inrt:cp2APP && ./gradlew app:assembleV6
+./gradlew app:buildTemplateApp && ./gradlew inrt:cp2APP && ./gradlew app:assembleV6
 #或
-./gradlew inrt:assembleTemplate ; ./gradlew inrt:cp2APP ; ./gradlew app:assembleV6
+./gradlew app:buildTemplateApp ; ./gradlew inrt:cp2APP ; ./gradlew app:assembleV6
 ```
 生成的是未签名的APK文件，在 app/build/outputs/apk/v6/release 下，需要签名后才能安装
 
@@ -144,9 +150,7 @@
 先运行以下命令：
 
 ```shell
-./gradlew inrt:assembleTemplate && ./gradlew inrt:cp2APP
-#或
-./gradlew inrt:assembleTemplate ; ./gradlew inrt:cp2APP
+./gradlew app:buildDebugTemplateApp
 ```
 
 再点击 Android Studio 运行按钮
@@ -155,9 +159,7 @@
 先运行以下命令：
 
 ```shell
-./gradlew inrt:assembleTemplate && ./gradlew inrt:cp2APP
-#或
-./gradlew inrt:assembleTemplate ; ./gradlew inrt:cp2APP
+./gradlew app:buildTemplateApp
 ```
 
 再点击 Android Studio 菜单 "Build" -> "Generate Signed Bundle /APK..." -> 勾选"APK" -> "Next" -> 选择或新建证书 -> "Next" -> 选择"v6Release" -> "Finish"

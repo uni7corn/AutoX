@@ -2,39 +2,27 @@ package org.autojs.autojs.ui.widget
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.Bitmap
 import android.os.Build
 import android.util.AttributeSet
 import android.view.KeyEvent
 import android.webkit.WebSettings
 import android.webkit.WebView
-import android.webkit.WebViewClient
 import org.autojs.autojs.theme.widget.ThemeColorSwipeRefreshLayout
 
 class SwipeRefreshWebView : ThemeColorSwipeRefreshLayout {
 
-    val webView = NestedWebView(context)
+    val webView = WebView(context)
 
-    constructor(context: Context) : super(context) {
-        init()
-    }
+    constructor(context: Context) : super(context)
 
-    constructor(context: Context, attrs: AttributeSet?) : super(context, attrs) {
-        init()
-    }
+    constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)
 
-    fun init() {
-        setOnRefreshListener {
-            webView.reload()
-            postDelayed({
-                isRefreshing = false
-            }, 2000)
-        }
+    init {
+        isEnabled = false
         webView.apply {
             fillMaxSize()
             setup()
         }
-
         addView(webView)
     }
 
@@ -68,8 +56,6 @@ class SwipeRefreshWebView : ThemeColorSwipeRefreshLayout {
             blockNetworkLoads = false;
             setNeedInitialFocus(true);
             saveFormData = true;
-            cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK //使用缓存
-            setAppCacheEnabled(false);
             domStorageEnabled = true
             databaseEnabled = true   //开启 database storage API 功能
             pluginState = WebSettings.PluginState.ON
@@ -81,37 +67,6 @@ class SwipeRefreshWebView : ThemeColorSwipeRefreshLayout {
             mixedContentMode =
                 WebSettings.MIXED_CONTENT_ALWAYS_ALLOW;
         }
-        webViewClient = MyWebViewClient(
-            onPageFinished = {
-                isRefreshing = false
-            }
-        )
-//        webChromeClient = MyWebChromeClient()
-    }
-
-}
-
-open class MyWebViewClient(private val onPageFinished: () -> Unit) : WebViewClient() {
-
-
-    override fun onPageStarted(
-        view: WebView,
-        url: String,
-        favicon: Bitmap?
-    ) {
-        super.onPageStarted(view, url, favicon)
-    }
-
-    override fun onPageFinished(view: WebView, url: String) {
-        super.onPageFinished(view, url)
-        onPageFinished()
-    }
-
-    override fun shouldOverrideUrlLoading(
-        view: WebView,
-        request: android.webkit.WebResourceRequest
-    ): Boolean {
-        return shouldOverrideUrlLoading(view, request.url.toString())
     }
 
 }

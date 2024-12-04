@@ -5,8 +5,9 @@ import android.os.MessageQueue
 import android.util.Log
 import com.stardust.autojs.rhino.AutoJsContext
 import com.stardust.autojs.runtime.ScriptRuntime
-import com.stardust.autojs.runtime.exception.ScriptInterruptedException
 import com.stardust.lang.ThreadCompat
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.runBlocking
 import org.mozilla.javascript.Context
 import java.util.concurrent.ConcurrentLinkedQueue
 
@@ -27,27 +28,21 @@ class Loopers(val runtime: ScriptRuntime) {
     }
 
     open class AsyncTask(private val describe: String) {
-        private val allBind = ConcurrentLinkedQueue<Loopers>()
         var isEnd: Boolean = false
             private set
-
-        //线程即将退出时调用，返回true阻止线程退出，只要有一个task返回true线程就不会退出
-        open fun onFinish(loopers: Loopers): Boolean {
-            return true
-        }
 
         fun end() {
             isEnd = true
         }
 
-        //线程正在退出，这里应该结束任务的执行，回收资源
-        open fun onStop(loopers: Loopers) {}
+        // 线程正在退出，这里应该结束任务的执行，回收资源
+        open fun onStop(loopers: Loopers) = Unit
         override fun toString(): String {
             return "AsyncTask: $describe"
         }
     }
 
-    private var waitWhenIdle: Boolean
+    private val isUiLooper: Boolean = Looper.myLooper() == Looper.getMainLooper()
 
     @Volatile
     private var mServantLooper: Looper? = null
@@ -56,11 +51,13 @@ class Loopers(val runtime: ScriptRuntime) {
     val mTimer: Timer
     val myLooper: Looper
 
+    @Volatile
+    var available = true
+
     init {
         prepare()
         myLooper = Looper.myLooper()!!
         mTimer = Timer(runtime, myLooper)
-        waitWhenIdle = myLooper == Looper.getMainLooper()
     }
 
     fun createAndAddAsyncTask(describe: String): AsyncTask {
@@ -69,76 +66,53 @@ class Loopers(val runtime: ScriptRuntime) {
         return task
     }
 
-    fun addAsyncTask(task: AsyncTask) {
-        synchronized(myLooper) {
-            allTasks.add(task)
-        }
+    fun addAsyncTask(task: AsyncTask) = synchronized(myLooper) {
+        Log.i(LOG_TAG, "addAsyncTask $task")
+        if (!allTasks.contains(task)) allTasks.add(task)
     }
 
-    fun removeAsyncTask(task: AsyncTask) {
-        synchronized(myLooper) {
-            allTasks.remove(task)
-            mTimer.post(EMPTY_RUNNABLE)
-        }
+    fun removeAsyncTask(task: AsyncTask) = synchronized(myLooper) {
+        allTasks.remove(task)
+        if (available) mTimer.post(EMPTY_RUNNABLE)
     }
 
     private fun checkTask(): Boolean {
         allTasks.removeAll(allTasks.filter { it.isEnd }.toSet())
-        for (task in allTasks) {
-            if (task.onFinish(this)) return true
-        }
-        return false
+        return allTasks.isNotEmpty()
     }
 
     private fun shouldQuitLooper(): Boolean {
         synchronized(myLooper) {
             if (Thread.currentThread().isInterrupted) return true
             if (mTimer.hasPendingCallbacks()) return false
-            //检查是否有运行中的线程
+            // 检查是否有运行中的线程
             if (checkTask()) return false
-            if (waitWhenIdle) return false
-            if ((Context.getCurrentContext() as AutoJsContext).hasPendingContinuation()) {
-                return false
-            }
-            return true
+            return !(Context.getCurrentContext() as AutoJsContext).hasPendingContinuation()
         }
-    }
-
-    private fun initServantThread() {
-        ThreadCompat {
-            Looper.prepare()
-            val lock = this@Loopers as java.lang.Object
-            mServantLooper = Looper.myLooper()
-            synchronized(lock) { lock.notifyAll() }
-            Looper.loop()
-        }.start()
     }
 
     val servantLooper: Looper
-        get() {
-            if (mServantLooper == null) {
-                initServantThread()
-                val lock = this as java.lang.Object
-                synchronized(lock) {
-                    try {
-                        lock.wait()
-                    } catch (e: InterruptedException) {
-                        throw ScriptInterruptedException(e)
-                    }
+        @Synchronized
+        get() = mServantLooper ?: runBlocking {
+            val looper = CompletableDeferred<Looper>()
+            ThreadCompat {
+                Looper.prepare()
+                looper.complete(Looper.myLooper()!!)
+                Looper.loop()
+            }.apply {
+                setUncaughtExceptionHandler { t, e ->
+                    mServantLooper = null
+                    Log.e(LOG_TAG, "servantLooper exception", e)
+                    t.interrupt()
                 }
-            }
-            return mServantLooper!!
+            }.start()
+            mServantLooper = looper.await()
+            looper.await()
         }
-
-    @Deprecated("使用AsyncTask代替")
-    fun waitWhenIdle(b: Boolean) {
-        (Thread.currentThread() as? TimerThread)?.let {
-            it.loopers?.createAndAddAsyncTask("events")
-        }?: createAndAddAsyncTask("events")
-    }
 
     fun recycle() {
         Log.d(LOG_TAG, "recycle")
+        available = false
         for (task in allTasks.filter { !it.isEnd }) {
             try {
                 task.onStop(this)
@@ -149,41 +123,53 @@ class Loopers(val runtime: ScriptRuntime) {
         mServantLooper?.quit()
     }
 
+    fun forceStop() {
+        if (!isUiLooper) {
+            myLooper.quit()
+        }
+    }
+
     @Deprecated("使用AsyncTask代替")
     fun setMainLooperQuitHandler(mainLooperQuitHandler: LooperQuitHandler?) {
         mMainLooperQuitHandler = mainLooperQuitHandler
     }
 
     private fun prepare() {
-        if (Looper.myLooper() == null) LooperHelper.prepare()
-        Looper.myQueue().addIdleHandler(MessageQueue.IdleHandler {
-            if (this == runtime.loopers) {
-                Log.d(LOG_TAG, "main looper queueIdle")
-                if (shouldQuitLooper() &&
-                    mMainLooperQuitHandler != null &&
-                    mMainLooperQuitHandler!!.shouldQuit()
-                ) {
-                    Log.d(LOG_TAG, "main looper quit")
-                    Looper.myLooper()!!.quitSafely()
+        if (isUiLooper) return
+        if (Looper.myLooper() == null) Looper.prepare()
+        Looper.myQueue().addIdleHandler(
+            MessageQueue.IdleHandler {
+                if (this == runtime.loopers) {
+                    Log.d(LOG_TAG, "main looper queueIdle")
+                    if (shouldQuitLooper() &&
+                        mMainLooperQuitHandler != null &&
+                        mMainLooperQuitHandler!!.shouldQuit()
+                    ) {
+                        Log.d(LOG_TAG, "main looper quit")
+                        Looper.myLooper()!!.quitSafely()
+                    }
+                } else {
+                    Log.d(LOG_TAG, "looper queueIdle $this")
+                    if (shouldQuitLooper()) {
+                        Log.d(LOG_TAG, "looper quit $this")
+                        Looper.myLooper()!!.quitSafely()
+                    }
                 }
-            }else {
-                Log.d(LOG_TAG, "looper queueIdle $this")
-                if (shouldQuitLooper()) {
-                    Log.d(LOG_TAG, "looper quit $this")
-                    Looper.myLooper()!!.quitSafely()
-                }
+                return@IdleHandler true
             }
-            return@IdleHandler true
-        })
+        )
     }
 
     fun notifyThreadExit(thread: TimerThread) {
         Log.d(LOG_TAG, "notifyThreadExit: $thread")
-        //当子线程退成时，主线程需要检查自身是否退出（主线程在所有子线程执行完成后才能退出，如果主线程已经执行完任务仍然要等待所有子线程），
-        //此时通过向主线程发送一个空的Runnable，主线程执行完这个Runnable后会触发IdleHandler，从而检查自身是否退出
-        //mHandler.post(EMPTY_RUNNABLE)
+        // 当子线程退成时，主线程需要检查自身是否退出（主线程在所有子线程执行完成后才能退出，如果主线程已经执行完任务仍然要等待所有子线程），
+        // 此时通过向主线程发送一个空的Runnable，主线程执行完这个Runnable后会触发IdleHandler，从而检查自身是否退出
+        // mHandler.post(EMPTY_RUNNABLE)
     }
 
+    fun addAsyncTaskToCurrentThreadLooper(task: AsyncTask) {
+        (Thread.currentThread() as? TimerThread)?.loopers?.addAsyncTask(task) ?: addAsyncTask(task)
+    }
     companion object {
         private const val LOG_TAG = "Loopers"
         private val EMPTY_RUNNABLE = Runnable {}

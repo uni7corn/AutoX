@@ -1,4 +1,9 @@
 <resources>
+    <string name="text_error_copy">复制信息</string>
+    <string name="text_error_restart">重启软件</string>
+    <string name="text_error_exit">退出软件</string>
+    <string name="text_error_save">已保存到路径:%1$s</string>
+
     <string name="app_name" translatable="false">Autox.js</string>
     <string name="text_broadcast_action_prefix" translatable="false">android.intent.action.</string>
     <string name="text_en_import" translatable="false">import</string>
@@ -13,27 +18,12 @@
     <string name="email" translatable="false">chengshulun@live.com</string>
     <string name="default_main_file_name" translatable="false">main.js</string>
 
-    <string name="key_auto_backup" translatable="false">key_auto_back</string>
-    <string name="key_night_mode" translatable="false">key_night_mode</string>
-    <string name="key_foreground_servie" translatable="false">key_foreground_service</string>
-    <string name="key_script_dir_path" translatable="false">key_script_dir_path</string>
-    <string name="key_documentation_source" translatable="false">key_documentation_source</string>
-    <string name="key_enable_observe_key" translatable="false">key_enable_observe_key</string>
-    <string name="key_single_build_clean_mode" translatable="false">key_single_build_clean_mode</string>
-    <string name="key_stable_mode" translatable="false">key_stable_mode</string>
-    <string name="key_record_toast" translatable="false">key_record_toast</string>
-    <string name="key_root_record_out_file_type" translatable="false">key_root_record_out_file_type</string>
-    <string name="key_use_volume_control_running" translatable="false">key_use_volume_control_running</string>
-    <string name="key_enable_accessibility_service_by_root" translatable="false">key_enable_accessibility_service_by_root</string>
-    <string name="key_max_length_for_code_completion" translatable="false">key_max_length_for_code_completion</string>
-    <string name="key_use_volume_control_record" translatable="false">key_use_volume_control_record</string>
-    <string name="key_guard_mode" translatable="false">key_guard_mode</string>
-
     <string name="default_value_script_dir_path" translatable="false">/脚本/</string>
     <string name="text_android_job" translatable="false">AndroidJob</string>
     <string name="text_alarm_manager" translatable="false">AlarmManager</string>
     <string name="text_work_manager" translatable="false">WorkManager</string>
 
+    <string name="text_intent_run_script">允许使用广播运行脚本</string>
     <string name="text_accessibility_service_description">使脚本自动操作(点击、长按、滑动等)所需，若关闭则只能执行不涉及自动操作的脚本。</string>
     <string name="text_new_file">新建文件</string>
     <string name="text_create_fail">创建失败</string>
@@ -266,6 +256,8 @@
     <string name="text_required_tesseract_ocr" translatable="false">TesseractOCR</string>
     <string name="text_required_7zip" translatable="false">7zip</string>
     <string name="text_required_terminal_emulator">终端模拟器</string>
+    <string name="text_is_encrypt">简单加密js文件</string>
+    <string name="text_encrypt_options">加密选项</string>
     <string name="text_required_background_start">需要后台弹出界面权限</string>
     <string name="text_required_draw_overlay">需要悬浮窗权限</string>
     <string name="text_volumeUpcontrol">音量上键结束任务</string>
